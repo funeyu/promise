@@ -27,8 +27,7 @@ Promise.prototype.findCatch = function() {
 
 Promise.prototype.then = function(resolve, reject){
   var me = this;
-  var defered = function(resolve, reject, value) {
-  }
+  var defered = function(resolve, reject, value) {}
   var p = new Promise(defered, true);
   this.nextPromise = p;
 
@@ -46,22 +45,17 @@ Promise.prototype.then = function(resolve, reject){
   }
 
   var onRejected = function(error) {
-    var next = me.nextPromise;
-    var catched;
-    while(next) {
-      catched = me.findCatch();
-      if(!catched) {
-        next = next.nextPromise;
-      } else {
-        break;
+    if(reject) {
+      return reject(error);
+    }
+    if(me.nextPromise.nextPromise){
+      for(var i = 0, ii = me.nextPromise.thens.length; i < ii; i ++) {
+        me.nextPromise.thens[i].reject(error);
       }
     }
-    console.log(catched);
-    if(catched) {
-      catched(error);
-    }
-    else {       //没找到catch函数，抛出未处理的错误；
-      throw error;
+    else {//没找到catch函数，抛出未处理的错误；
+      console.log('error');
+      throw Error(error);
     }
   };
   this.thens.push({'resolve': onResolved, 'reject': onRejected});
