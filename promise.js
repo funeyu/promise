@@ -55,3 +55,37 @@ Promise.prototype.then = function(resolve, reject){
 Promise.prototype.catch = function(reject) {
   return this.then(void 0, reject);
 }
+
+Promise.all = function(promises) {
+  if(!promises instanceof Array) {
+    throw Error('all() only called with series of promise!');
+  }
+
+  var results = new Array(promises.length);
+  var finished = 0;
+  var delegates = new Promise(function(resolve, reject){});
+  for(var i = 0, ii = promises.length; i < ii; i ++) {
+    promises[i].then(function(result) {
+      console.log(result);
+      results[i] = result;
+      if((++finished) == promises.length) {
+        console.log(delegates.nextPromise.defered);
+        delegates.nextPromise.defered(delegates.thens[0].resolve, void 0, results);
+      }
+    })
+  }
+
+  return delegates;
+}
+
+var promise1 = new Promise(function(resolve, reject){
+  window.setTimeout(function(){resolve('promise1')}, 1000);
+});
+var promise2 = new Promise(function(resolve, reject){
+  window.setTimeout(function() {
+    resolve('promise2')
+  }, 2000);
+});
+Promise.all([promise1, promise2]).then(function(results){
+  console.log(results);
+});
