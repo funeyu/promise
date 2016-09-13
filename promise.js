@@ -16,15 +16,6 @@ Promise.prototype.calledSoon = function() {
   }.bind(this), 0);
 }
 
-// 返回promise链的catch方法；
-Promise.prototype.findCatch = function() {
-  for (var i = 0 , ii = this.thens.length; i < ii; i ++) {
-    if (this.thens[i].reject) {
-      return this.thens[i].reject;
-    }
-  }
-}
-
 Promise.prototype.then = function(resolve, reject){
   var me = this;
   var defered = function(resolve, reject, value) {}
@@ -54,7 +45,6 @@ Promise.prototype.then = function(resolve, reject){
       }
     }
     else {//没找到catch函数，抛出未处理的错误；
-      console.log('error');
       throw Error(error);
     }
   };
