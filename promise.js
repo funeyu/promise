@@ -18,7 +18,9 @@ Promise.prototype.calledSoon = function() {
 
 Promise.prototype.then = function(resolve, reject){
   var me = this;
-  var defered = function(resolve, reject, value) {}
+  var defered = function(resolve, reject, value) {
+    return resolve(value);
+  }
   var p = new Promise(defered, true);
   this.nextPromise = p;
 
@@ -66,10 +68,8 @@ Promise.all = function(promises) {
   var delegates = new Promise(function(resolve, reject){});
   for(var i = 0, ii = promises.length; i < ii; i ++) {
     promises[i].then(function(result) {
-      console.log(result);
-      results[i] = result;
+      results[finished] = result;
       if((++finished) == promises.length) {
-        console.log(delegates.nextPromise.defered);
         delegates.nextPromise.defered(delegates.thens[0].resolve, void 0, results);
       }
     })
@@ -77,15 +77,3 @@ Promise.all = function(promises) {
 
   return delegates;
 }
-
-var promise1 = new Promise(function(resolve, reject){
-  window.setTimeout(function(){resolve('promise1')}, 1000);
-});
-var promise2 = new Promise(function(resolve, reject){
-  window.setTimeout(function() {
-    resolve('promise2')
-  }, 2000);
-});
-Promise.all([promise1, promise2]).then(function(results){
-  console.log(results);
-});

@@ -30,3 +30,18 @@ new Promise(function(resolve){
 
 ```
 > 如上代码支持链式写法，catch的链式捕捉
+
++ Promise的all方法使用范例：
+``` javascript
+var promise1 = new Promise(function(resolve, reject){
+  window.setTimeout(function(){resolve('promise1')}, 1000);
+});
+var promise2 = new Promise(function(resolve, reject){
+  window.setTimeout(function() {
+    resolve('promise2')
+  }, 2000);
+});
+Promise.all([promise1, promise2]).then(function(results){
+  console.log(results);
+});
+```
