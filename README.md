@@ -60,7 +60,7 @@ FuPromise.race([promise1, promise2]).then(function(results){
 });
 ```
 
-
+## ajax的请求范例
 ``` javascript
 function getURL(URL) {
     return new FuPromise(function (resolve, reject) {
