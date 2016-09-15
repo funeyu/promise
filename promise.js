@@ -1,4 +1,4 @@
-var Promise = function(defered, thenable){
+var FuPromise = function(defered, thenable){
   this.thens = [];
   this.result;
   this.nextPromise;
@@ -10,7 +10,7 @@ var Promise = function(defered, thenable){
   }
 }
 
-Promise.prototype.calledSoon = function() {
+FuPromise.prototype.calledSoon = function() {
   var self = this;
   setTimeout(function() {
     for (var i = 0, ii = self.thens.length; i < ii; i ++) {
@@ -19,17 +19,16 @@ Promise.prototype.calledSoon = function() {
   }, 0);
 }
 
-Promise.prototype.then = function(resolve, reject){
+FuPromise.prototype.then = function(resolve, reject){
   var me = this;
   var defered = function(resolvedHandler, rejectionHandler, value) {
-    resolvedHandler ? resolvedHandler(value) : rejectionHandler(value);
   }
-  var p = new Promise(defered, true);
+  var p = new FuPromise(defered, true);
   this.nextPromise = p;
 
   var onResolved = function(value) {
     me.result = resolve(value);
-    if(me.result instanceof Promise) {
+    if(me.result instanceof FuPromise) {
       me.result.thens = me.nextPromise.thens;
       return me.result;
     }
@@ -57,18 +56,18 @@ Promise.prototype.then = function(resolve, reject){
   return p;
 }
 
-Promise.prototype.catch = function(reject) {
+FuPromise.prototype.catch = function(reject) {
   return this.then(void 0, reject);
 }
 
-Promise.all = function(promises) {
+FuPromise.all = function(promises) {
   if(!promises instanceof Array) {
     throw Error('all() only called with series of promises!');
   }
 
   var results = new Array(promises.length);
   var finished = 0;
-  var delegates = new Promise(function(resolve, reject){});
+  var delegates = new FuPromise(function(resolve, reject){});
   for(var i = 0, ii = promises.length; i < ii; i ++) {
     promises[i].then(function(result) {
       results[finished] = result;
@@ -81,14 +80,14 @@ Promise.all = function(promises) {
   return delegates;
 }
 
-Promise.race = function(promises) {
+FuPromise.race = function(promises) {
   if(!promises instanceof Array) {
     throw Error('race() only called with series of promises!')
   }
 
   var ranking = 0;
 
-  var fastest = new Promise(function(resolve, reject){});
+  var fastest = new FuPromise(function(resolve, reject){});
   for(var i = 0, ii = promises.length; i < ii; i ++) {
     promises[i].then(function(result){
       if(++ranking === 1) {

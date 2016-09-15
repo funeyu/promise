@@ -6,18 +6,18 @@
 ## 使用的范例
 ``` javascript
 
-new Promise(function(resolve){
+new FuPromise(function(resolve){
    window.setTimeout(function(){resolve(10000)}, 4000);
 }).then(function(value){
   console.log(value);
-  return new Promise(function(resolve, reject) {
+  return new FuPromise(function(resolve, reject) {
     window.setTimeout(function(){
       resolve(20000)
     }, 4000);
   });
 }).then(function(val){
   console.log(val + 'dfa');
-  return new Promise(function(resolve,reject) {
+  return new FuPromise(function(resolve,reject) {
     window.setTimeout(function(){
       reject(val + 'ddd');
     }, 1000);
@@ -33,29 +33,58 @@ new Promise(function(resolve){
 
 + Promise的all方法使用范例：
 ``` javascript
-var promise1 = new Promise(function(resolve, reject){
+var promise1 = new FuPromise(function(resolve, reject){
   window.setTimeout(function(){resolve('promise1')}, 1000);
 });
-var promise2 = new Promise(function(resolve, reject){
+var promise2 = new FuPromise(function(resolve, reject){
   window.setTimeout(function() {
     resolve('promise2')
   }, 2000);
 });
-Promise.all([promise1, promise2]).then(function(results){
+FuPromise.all([promise1, promise2]).then(function(results){
   console.log(results);
 });
 ```
 + Promise的race 方法使用范例：
 ``` javascript
-var promise1 = new Promise(function(resolve, reject){
+var promise1 = new FuPromise(function(resolve, reject){
   window.setTimeout(function(){resolve('promise1')}, 1000);
 });
-var promise2 = new Promise(function(resolve, reject){
+var promise2 = new FuPromise(function(resolve, reject){
   window.setTimeout(function() {
     resolve('promise2')
   }, 2000);
 });
-Promise.race([promise1, promise2]).then(function(results){
+FuPromise.race([promise1, promise2]).then(function(results){
   console.log(results);
+});
+```
+
+
+``` javascript
+function getURL(URL) {
+    return new FuPromise(function (resolve, reject) {
+        var req = new XMLHttpRequest();
+        req.open('GET', URL, true);
+        req.onload = function () {
+            if (req.status === 200) {
+                resolve(req.responseText);
+            } else {
+                reject(new Error(req.statusText));
+            }
+        };
+        req.onerror = function () {
+            reject(new Error(req.statusText));
+        };
+        req.send();
+    });
+}
+// 运行示例
+var URL = "http://www.fengjr.com/";
+getURL(URL).then(function (value){
+    console.log('value');
+    console.log(value);
+}).catch(function (error){
+    console.error(error);
 });
 ```
