@@ -3,23 +3,26 @@ var Promise = function(defered, thenable){
   this.result;
   this.nextPromise;
   this.defered = defered;
+  // thenable is true on the condition Promise initialized in then function
+  // in that case promise not needed to be called immediately
   if(!thenable) {
     this.calledSoon();
   }
 }
 
 Promise.prototype.calledSoon = function() {
+  var self = this;
   setTimeout(function() {
-    for (var i = 0, ii = this.thens.length; i < ii; i ++) {
-      this.defered.call(null, this.thens[i].resolve, this.thens[i].reject);
+    for (var i = 0, ii = self.thens.length; i < ii; i ++) {
+      self.defered.call(null, self.thens[i].resolve, self.thens[i].reject);
     }
-  }.bind(this), 0);
+  }, 0);
 }
 
 Promise.prototype.then = function(resolve, reject){
   var me = this;
-  var defered = function(resolve, reject, value) {
-    return resolve(value);
+  var defered = function(resolvedHandler, rejectionHandler, value) {
+    resolvedHandler ? resolvedHandler(value) : rejectionHandler(value);
   }
   var p = new Promise(defered, true);
   this.nextPromise = p;
@@ -46,7 +49,7 @@ Promise.prototype.then = function(resolve, reject){
         me.nextPromise.thens[i].reject(error);
       }
     }
-    else {//没找到catch函数，抛出未处理的错误；
+    else {//not find catch function, throwing the unCaught Exception
       throw Error(error);
     }
   };
@@ -60,7 +63,7 @@ Promise.prototype.catch = function(reject) {
 
 Promise.all = function(promises) {
   if(!promises instanceof Array) {
-    throw Error('all() only called with series of promise!');
+    throw Error('all() only called with series of promises!');
   }
 
   var results = new Array(promises.length);
@@ -76,4 +79,23 @@ Promise.all = function(promises) {
   }
 
   return delegates;
+}
+
+Promise.race = function(promises) {
+  if(!promises instanceof Array) {
+    throw Error('race() only called with series of promises!')
+  }
+
+  var ranking = 0;
+
+  var fastest = new Promise(function(resolve, reject){});
+  for(var i = 0, ii = promises.length; i < ii; i ++) {
+    promises[i].then(function(result){
+      if(++ranking === 1) {
+        fastest.nextPromise.defered(fastest.thens[0].resolve, void 0, result);
+      }
+    });
+  }
+
+  return fastest;
 }

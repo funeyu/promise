@@ -45,3 +45,17 @@ Promise.all([promise1, promise2]).then(function(results){
   console.log(results);
 });
 ```
++ Promise的race 方法使用范例：
+``` javascript
+var promise1 = new Promise(function(resolve, reject){
+  window.setTimeout(function(){resolve('promise1')}, 1000);
+});
+var promise2 = new Promise(function(resolve, reject){
+  window.setTimeout(function() {
+    resolve('promise2')
+  }, 2000);
+});
+Promise.race([promise1, promise2]).then(function(results){
+  console.log(results);
+});
+```
