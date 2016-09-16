@@ -22,11 +22,15 @@ FuPromise.prototype.calledSoon = function() {
 FuPromise.prototype.then = function(resolve, reject){
   var me = this;
   var defered = function(resolvedHandler, rejectionHandler, value) {
+    return resolvedHandler ? resolvedHandler(value) : rejectionHandler(value);
   }
   var p = new FuPromise(defered, true);
   this.nextPromise = p;
 
   var onResolved = function(value) {
+    if(!resolve) {
+      return ;
+    }
     me.result = resolve(value);
     if(me.result instanceof FuPromise) {
       me.result.thens = me.nextPromise.thens;
