@@ -38,7 +38,7 @@ FuPromise.prototype.then = function(resolve, reject){
     }
     if(me.nextPromise.nextPromise) {
       for(var i = 0, ii = me.nextPromise.thens.length; i < ii; i ++ ){
-        me.nextPromise.defered(me.nextPromise.thens[i].resolve, void 0, value);
+        me.nextPromise.defered(me.nextPromise.thens[i].resolve, void 0, me.result);
       }
     }
   }
