@@ -38,8 +38,6 @@ FuPromise.prototype.onRejected = function(reason) {
 
 FuPromise.prototype._async = function(promise, handler, arg) {
   var me = this
-  console.log(me)
-  // if(!me.followee()) return
 
   FuPromise.schedule(function() {
     for(var i = 0; i < me.thens.length; i ++) {
