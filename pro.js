@@ -1,8 +1,9 @@
 
 var FuPromise = function(excutor){
-  if(typeof excutor !== 'function') {
+  if (typeof excutor !== 'function') {
     return new Error('excutor should be a function')
   }
+  //.then 生成的promise，形成promise链
   this.follow
   this.state = 'PENDING'
   this.result
@@ -12,6 +13,7 @@ var FuPromise = function(excutor){
 }
 
 FuPromise.prototype.followee = function() {
+
   return this.follow
 }
 
@@ -25,17 +27,18 @@ FuPromise.prototype.onFulfilled = function(value) {
 
   this.state = 'FULFILLED'
   this.result = value
-  this._async(this, void 0, void 0)
+  this._async()
 }
 
 FuPromise.prototype.onRejected = function(reason) {
   if(this.state !== 'PENDING') return
 
   this.state = 'REJECTED'
-  this.result = reason
-  this._async(this, void 0, void 0)
+  this.reason = reason
+  this._async()
 }
 
+// 异步调用then的回调
 FuPromise.prototype._async = function(promise, handler, arg) {
   var me = this
 
@@ -43,19 +46,42 @@ FuPromise.prototype._async = function(promise, handler, arg) {
     for(var i = 0; i < me.thens.length; i ++) {
       var followee = me.thens[i].promise
       if(me.state === 'FULFILLED') {
-        try {
-          var result = me.thens[i].fulfillmentHandler.call(me, me.result)
+        // 如果.then没有成功回调，则将此result传递给follow
+        if (!me.thens[i].fulfillmentHandler) {
+          followee.onFulfilled(me.result)
+        }
+        else { //成功回调
+          try {
+            var result = me.thens[i].fulfillmentHandler.call(me, me.result)
+            if (result && typeof result.then !== 'undefined') {
+              // 如果then返回的是promise就直接将后继promise的thens 接到此promise上
+              result.thens = followee.thens
+            }
+            else {
+              followee.onFulfilled(result)
+            }
+          } catch (error) {
+            me.thens[i].rejectionHandler.call(me, error)
+          }
+        }
+      }
+
+      if (me.state === 'REJECTED') {
+        if (!me.thens[i].rejectionHandler) {
+          if (!followee.followee()) return new Error(me.reason + 'error produced by promise should be caught')
+          followee.onRejected(me.reason)
+        }
+        else {
+          var result = me.thens[i].rejectionHandler.call(me, me.reason)
           if(result && typeof result.then !== 'undefined') {
-            // 如果then返回的是promise就直接将后继promise的thens 接到此promise上
             result.thens = followee.thens
           }
           else {
             followee.onFulfilled(result)
           }
-        } catch(error) {
-
         }
       }
+      
     }
   })
 }
@@ -66,12 +92,17 @@ FuPromise.prototype.then = function(onFulfilled, onRejected) {
   var me = this
   this.thens.push({
     promise: promise,
-    fulfillmentHandler: function(result) {
-      return onFulfilled(result)
-    },
-    rejectionHandler: function(reason) {
-      return onRejected(reason)
-    }
+    fulfillmentHandler: onFulfilled
+      ? function(result) {
+        return onFulfilled(result)
+      }
+      : void 0,
+
+    rejectionHandler: onRejected
+      ? function(reason) {
+        return onRejected(reason)
+      }
+      : void 0
   })
 
   return promise
