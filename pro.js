@@ -12,7 +12,7 @@ var FuPromise = function(excutor){
   this._execute(excutor)
 }
 
-FuPromise.prototype.followee = function() {
+FuPromise.prototype.getFollowee = function() {
 
   return this.follow
 }
@@ -68,7 +68,7 @@ FuPromise.prototype._async = function(promise, handler, arg) {
 
       if (me.state === 'REJECTED') {
         if (!me.thens[i].rejectionHandler) {
-          if (!followee.followee()) return new Error(me.reason + 'error produced by promise should be caught')
+          if (!followee.getFollowee()) throw new Error(me.reason + 'error produced by promise should be caught')
           followee.onRejected(me.reason)
         }
         else {
@@ -81,7 +81,7 @@ FuPromise.prototype._async = function(promise, handler, arg) {
           }
         }
       }
-      
+
     }
   })
 }
