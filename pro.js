@@ -108,6 +108,69 @@ FuPromise.prototype.then = function(onFulfilled, onRejected) {
   return promise
 }
 
+FuPromise.prototype.catch = function(reject) {
+  return this.then(void 0, reject)
+}
+
+// static method
+FuPromise.reject = function(reason) {
+  return new FuPromise(function(resolve, reject) {
+    reject(reason)
+  })
+}
+
+FuPromise.resolve = function(result) {
+  return new FuPromise(function(resolve, reject) {
+    resolve(result)
+  })
+}
+
+FuPromise.all = function(promiseArray) {
+  if(!promiseArray instanceof Array) {
+    throw Error('all() only called with series of promises!')
+  }
+
+  var results = new Array(promiseArray.length)
+  var finished = 0
+  var p = new FuPromise(function(resolve, reject){})
+  for(var i = 0; i < promiseArray.length; i ++) {
+    promiseArray[i].then(function(data) {
+      results[finished++] = data
+      if(finished === promiseArray.length) {
+        p.onFulfilled(results)
+      }
+    }).catch(function(reason){
+      // 这里是p已经settled，下面的p.onResolved(results)就会不起作用
+      p.onRejected(reason)
+    })
+  }
+
+  return p
+}
+
+FuPromise.race = function(promiseArray) {
+  if(!promiseArray instanceof Array) {
+    throw Error('race() only called with series of promises!')
+  }
+
+  var p = new FuPromise(function(resolve, reject){})
+  var first = 0
+  var errorCount = 0
+  for(var i = 0; i < promiseArray.length; i ++) {
+    promiseArray[i].then(function(data) {
+      if(++first === 1) {
+        p.onFulfilled(data)
+      }
+    }).catch(function(error){
+      if(++errorCount === promiseArray.length) {
+        p.onRejected('no promise resolved!!!')
+      }
+    })
+  }
+
+  return p
+}
+
 // 根据浏览器环境设置异步调用
 if(typeof MutationObserver !== 'undefined' && typeof window !== 'undefined') {
   FuPromise.schedule = (function() {
