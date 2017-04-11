@@ -87,9 +87,9 @@ FuPromise.prototype._async = function(promise, handler, arg) {
 }
 
 FuPromise.prototype.then = function(onFulfilled, onRejected) {
-  var promise = new FuPromise(function(resolve, reject) {})
   this.follow = promise
   var me = this
+  var promise = new FuPromise(function(resolve, reject) {})
   this.thens.push({
     promise: promise,
     fulfillmentHandler: onFulfilled
@@ -104,6 +104,10 @@ FuPromise.prototype.then = function(onFulfilled, onRejected) {
       }
       : void 0
   })
+
+  if(this.state !== 'PENDING') {
+    this._async()
+  }
 
   return promise
 }
