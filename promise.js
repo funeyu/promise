@@ -1,104 +1,207 @@
-var FuPromise = function(defered, thenable){
-  this.thens = [];
-  this.result;
-  this.nextPromise;
-  this.defered = defered;
-  // thenable is true on the condition Promise initialized in then function
-  // in that case promise not needed to be called immediately
-  if(!thenable) {
-    this.calledSoon();
+
+var FuPromise = function(excutor){
+  if (typeof excutor !== 'function') {
+    return new Error('excutor should be a function')
   }
+  //.then 生成的promise，形成promise链
+  this.follow
+  this.state = 'PENDING'
+  this.result
+  this.thens = []
+
+  this._execute(excutor)
 }
 
-FuPromise.prototype.calledSoon = function() {
-  var self = this;
-  setTimeout(function() {
-    for (var i = 0, ii = self.thens.length; i < ii; i ++) {
-      self.defered.call(null, self.thens[i].resolve, self.thens[i].reject);
-    }
-  }, 0);
+FuPromise.prototype.getFollowee = function() {
+
+  return this.follow
 }
 
-FuPromise.prototype.then = function(resolve, reject){
-  var me = this;
-  var defered = function(resolvedHandler, rejectionHandler, value) {
-    return resolvedHandler ? resolvedHandler(value) : rejectionHandler(value);
-  }
-  var p = new FuPromise(defered, true);
-  this.nextPromise = p;
+FuPromise.prototype._execute = function(excutor) {
 
-  var onResolved = function(value) {
-    if(!resolve) {
-      return ;
-    }
-    me.result = resolve(value);
-    if(me.result instanceof FuPromise) {
-      me.result.thens = me.nextPromise.thens;
-      return me.result;
-    }
-    if(me.nextPromise.nextPromise) {
-      for(var i = 0, ii = me.nextPromise.thens.length; i < ii; i ++ ){
-        me.nextPromise.defered(me.nextPromise.thens[i].resolve, void 0, me.result);
-      }
-    }
-  }
+  excutor.call(this, this.onFulfilled.bind(this), this.onRejected.bind(this))
+}
 
-  var onRejected = function(error) {
-    if(reject) {
-      return reject(error);
-    }
-    if(me.nextPromise.nextPromise){
-      for(var i = 0, ii = me.nextPromise.thens.length; i < ii; i ++) {
-        me.nextPromise.thens[i].reject(error);
+FuPromise.prototype.onFulfilled = function(value) {
+  if(this.state !== 'PENDING') return
+
+  this.state = 'FULFILLED'
+  this.result = value
+  this._async()
+}
+
+FuPromise.prototype.onRejected = function(reason) {
+  if(this.state !== 'PENDING') return
+
+  this.state = 'REJECTED'
+  this.reason = reason
+  this._async()
+}
+
+// 异步调用then的回调
+FuPromise.prototype._async = function(promise, handler, arg) {
+  var me = this
+
+  FuPromise.schedule(function() {
+    for(var i = 0; i < me.thens.length; i ++) {
+      var followee = me.thens[i].promise
+      if(me.state === 'FULFILLED') {
+        // 如果.then没有成功回调，则将此result传递给follow
+        if (!me.thens[i].fulfillmentHandler) {
+          followee.onFulfilled(me.result)
+        }
+        else { //成功回调
+          try {
+            var result = me.thens[i].fulfillmentHandler.call(me, me.result)
+            if (result && typeof result.then !== 'undefined') {
+              // 如果then返回的是promise就直接将后继promise的thens 接到此promise上
+              result.thens = followee.thens
+            }
+            else {
+              followee.onFulfilled(result)
+            }
+          } catch (error) {
+            me.thens[i].rejectionHandler.call(me, error)
+          }
+        }
       }
+
+      if (me.state === 'REJECTED') {
+        if (!me.thens[i].rejectionHandler) {
+          if (!followee.getFollowee()) throw new Error(me.reason + 'error produced by promise should be caught')
+          followee.onRejected(me.reason)
+        }
+        else {
+          var result = me.thens[i].rejectionHandler.call(me, me.reason)
+          if(result && typeof result.then !== 'undefined') {
+            result.thens = followee.thens
+          }
+          else {
+            followee.onFulfilled(result)
+          }
+        }
+      }
+
     }
-    else {//not find catch function, throwing the unCaught Exception
-      throw Error(error);
-    }
-  };
-  this.thens.push({'resolve': onResolved, 'reject': onRejected});
-  return p;
+  })
+}
+
+FuPromise.prototype.then = function(onFulfilled, onRejected) {
+  var promise = new FuPromise(function(resolve, reject) {})
+  this.follow = promise
+  var me = this
+  this.thens.push({
+    promise: promise,
+    fulfillmentHandler: onFulfilled
+      ? function(result) {
+        return onFulfilled(result)
+      }
+      : void 0,
+
+    rejectionHandler: onRejected
+      ? function(reason) {
+        return onRejected(reason)
+      }
+      : void 0
+  })
+
+  return promise
 }
 
 FuPromise.prototype.catch = function(reject) {
-  return this.then(void 0, reject);
+  return this.then(void 0, reject)
 }
 
-FuPromise.all = function(promises) {
-  if(!promises instanceof Array) {
-    throw Error('all() only called with series of promises!');
+// static method
+FuPromise.reject = function(reason) {
+  return new FuPromise(function(resolve, reject) {
+    reject(reason)
+  })
+}
+
+FuPromise.resolve = function(result) {
+  return new FuPromise(function(resolve, reject) {
+    resolve(result)
+  })
+}
+
+FuPromise.all = function(promiseArray) {
+  if(!promiseArray instanceof Array) {
+    throw Error('all() only called with series of promises!')
   }
 
-  var results = new Array(promises.length);
-  var finished = 0;
-  var delegates = new FuPromise(function(resolve, reject){});
-  for(var i = 0, ii = promises.length; i < ii; i ++) {
-    promises[i].then(function(result) {
-      results[finished] = result;
-      if((++finished) == promises.length) {
-        delegates.nextPromise.defered(delegates.thens[0].resolve, void 0, results);
+  var results = new Array(promiseArray.length)
+  var finished = 0
+  var p = new FuPromise(function(resolve, reject){})
+  for(var i = 0; i < promiseArray.length; i ++) {
+    promiseArray[i].then(function(data) {
+      results[finished++] = data
+      if(finished === promiseArray.length) {
+        p.onFulfilled(results)
+      }
+    }).catch(function(reason){
+      // 这里是p已经settled，下面的p.onResolved(results)就会不起作用
+      p.onRejected(reason)
+    })
+  }
+
+  return p
+}
+
+FuPromise.race = function(promiseArray) {
+  if(!promiseArray instanceof Array) {
+    throw Error('race() only called with series of promises!')
+  }
+
+  var p = new FuPromise(function(resolve, reject){})
+  var first = 0
+  var errorCount = 0
+  for(var i = 0; i < promiseArray.length; i ++) {
+    promiseArray[i].then(function(data) {
+      if(++first === 1) {
+        p.onFulfilled(data)
+      }
+    }).catch(function(error){
+      if(++errorCount === promiseArray.length) {
+        p.onRejected('no promise resolved!!!')
       }
     })
   }
 
-  return delegates;
+  return p
 }
 
-FuPromise.race = function(promises) {
-  if(!promises instanceof Array) {
-    throw Error('race() only called with series of promises!')
+// 根据浏览器环境设置异步调用
+if(typeof MutationObserver !== 'undefined' && typeof window !== 'undefined') {
+  FuPromise.schedule = (function() {
+    var div = document.createElement('div')
+    var opts = {attributes: true}
+    var div2 = document.createElement('div')
+    toggleScheduled = false
+    var o2 = new MutationObserver(function() {
+      div.classList.toggle('foo')
+      toggleScheduled = false
+    })
+    o2.observe(div2, opts)
+
+    var scheduleToggle = function() {
+      if(toggleScheduled) return
+      toggleScheduled = true
+      div2.classList.toggle('foo')
+    }
+
+    return function schedule(fn) {
+      var o = new MutationObserver(function() {
+        o.disconnect()
+        fn()
+      })
+      o.observe(div, opts)
+      scheduleToggle()
+    }
+  })()
+}
+else if(typeof setTimeout !== 'undefined') {
+  FuPromise.schedule = function(fn) {
+    setTimeout(fn, 0)
   }
-
-  var ranking = 0;
-
-  var fastest = new FuPromise(function(resolve, reject){});
-  for(var i = 0, ii = promises.length; i < ii; i ++) {
-    promises[i].then(function(result){
-      if(++ranking === 1) {
-        fastest.nextPromise.defered(fastest.thens[0].resolve, void 0, result);
-      }
-    });
-  }
-
-  return fastest;
 }
