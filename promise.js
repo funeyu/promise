@@ -82,6 +82,7 @@ FuPromise.prototype._async = function(promise, handler, arg) {
         }
       }
 
+      me.thens.length = 0
     }
   })
 }
