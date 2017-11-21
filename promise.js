@@ -52,13 +52,19 @@ FuPromise.prototype._async = function(promise, handler, arg) {
         }
         else { //成功回调
           try {
-            var result = me.thens[i].fulfillmentHandler.call(me, me.result)
-            if (result && typeof result.then !== 'undefined') {
-              // 如果then返回的是promise就直接将后继promise的thens 接到此promise上
-              result.thens = followee.thens
-            }
-            else {
-              followee.onFulfilled(result)
+            // resolve（result）: result is one promise
+            if(me.result && typeof (me.result.then) !== 'undefined') {
+              me.result.thens = followee.thens;
+              console.log(me, followee)
+            } else if(me.result) {
+                var result = me.thens[i].fulfillmentHandler.call(me, me.result)
+                if (result && typeof result.then !== 'undefined') {
+                    // 如果then返回的是promise就直接将后继promise的thens 接到此promise上
+                    result.thens = followee.thens
+                }
+                else {
+                    followee.onFulfilled(result)
+                }
             }
           } catch (error) {
             me.thens[i].rejectionHandler.call(me, error)

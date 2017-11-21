@@ -1,4 +1,4 @@
-// 测试,v0.1版本和原生Promise执行结果不一致
+// 测试,v-0.11版本和原生Promise执行结果不一致
 new Promise(resolve=>{
     resolve(new Promise(reject=>{
         setTimeout(()=>{
